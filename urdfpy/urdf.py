@@ -3397,7 +3397,7 @@ class URDF(URDFType):
                 fk[cm] = poses
         return fk
 
-    def animate(self, cfg_trajectory=None, loop_time=3.0, use_collision=False):
+    def animate(self, cfg_trajectory=None, loop_time=3.0, env_trimeshes=[], use_collision=False):
         """Animate the URDF through a configuration trajectory.
 
         Parameters
@@ -3511,6 +3511,11 @@ class URDF(URDFType):
 
         node_map = {}
         scene = pyrender.Scene()
+
+        for tm in env_trimeshes:
+            mesh = pyrender.Mesh.from_trimesh(tm, smooth=False)
+            scene.add(mesh)
+
         for tm in fk:
             pose = fk[tm]
             mesh = pyrender.Mesh.from_trimesh(tm, smooth=False)
@@ -3544,7 +3549,7 @@ class URDF(URDFType):
 
             time.sleep(1.0 / fps)
 
-    def show(self, cfg=None, use_collision=False):
+    def show(self, cfg=None, env_trimeshes=[], use_collision=False):
         """Visualize the URDF in a given configuration.
 
         Parameters
@@ -3567,11 +3572,18 @@ class URDF(URDFType):
             fk = self.visual_trimesh_fk(cfg=cfg)
 
         scene = pyrender.Scene()
+        for tm in env_trimeshes:
+            mesh = pyrender.Mesh.from_trimesh(tm, smooth=True)
+            scene.add(mesh)
+        trimesh_meshes = []
         for tm in fk:
             pose = fk[tm]
-            mesh = pyrender.Mesh.from_trimesh(tm, smooth=False)
+            mesh = pyrender.Mesh.from_trimesh(tm, smooth=True)
             scene.add(mesh, pose=pose)
+            tm.apply_transform(pose)
+            trimesh_meshes.append(tm)
         pyrender.Viewer(scene, use_raymond_lighting=True)
+        return trimesh_meshes
 
     def copy(self, name=None, prefix='', scale=None, collision_only=False):
         """Make a deep copy of the URDF.
